@@ -25,6 +25,7 @@ from src.states.coregame import Coregame
 from src.table import Table
 from src.server import Server
 from src.errors import Error
+from src.match import Match
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -71,6 +72,8 @@ try:
     agent_dict = content.get_all_agents()
 
     colors = Colors(hide_names, agent_dict, AGENTCOLORLIST)
+
+    match = Match(Requests, log)
 
     loadoutsClass = Loadouts(Requests, log, colors, Server)
     tableClass = Table()
@@ -168,6 +171,7 @@ try:
                                 PLcolor = ""
                         else:
                             PLcolor = colors.level_to_color(player_level)
+                        
                         # AGENT
                         # agent = str(agent_dict.get(player["CharacterID"].lower()))
                         agent = colors.get_agent_from_uuid(player["CharacterID"].lower())
@@ -196,6 +200,10 @@ try:
 
                         # LEVEL
                         level = PLcolor
+
+                        # Rank Ratings
+                        matches = match.get_recent_five_matches(player["Subject"])
+
                         tableClass.add_row_table(table, [party_icon,
                                               agent,
                                               name,
@@ -205,7 +213,8 @@ try:
                                               rr,
                                               peakRank,
                                               leaderboard,
-                                              level
+                                              level,
+                                              " | ".join(matches)
                                               ])
                         bar()
             elif game_state == "PREGAME":
@@ -305,6 +314,9 @@ try:
                         # LEVEL
                         level = PLcolor
 
+                        # Rank Rating
+                        matches = match.get_recent_five_matches(player["Subject"])
+
                         tableClass.add_row_table(table, [party_icon,
                                               agent,
                                               name,
@@ -315,6 +327,7 @@ try:
                                               peakRank,
                                               leaderboard,
                                               level,
+                                              " | ".join(matches)
                                               ])
                         bar()
             if game_state == "MENUS":
@@ -357,6 +370,9 @@ try:
                         # LEVEL
                         level = PLcolor
 
+                        # Rank Rating
+                        matches = match.get_recent_five_matches(player["Subject"])
+
                         tableClass.add_row_table(table, [party_icon,
                                               agent,
                                               name,
@@ -365,7 +381,8 @@ try:
                                               rr,
                                               peakRank,
                                               leaderboard,
-                                              level
+                                              level,
+                                              " | ".join(matches)
                                               ])
                         # table.add_rows([])
                         bar()
@@ -377,7 +394,7 @@ try:
             else:
                 table.title = f"VALORANT status: {title}"
             server = ""
-            table.field_names = ["Party", "Agent", "Name", "Skin", "Rank", "RR", "Peak Rank", "pos.", "Level"]
+            table.field_names = ["Party", "Agent", "Name", "Skin", "Rank", "RR", "Peak Rank", "pos.", "Level", "Rank Ratings"]
             if title is not None:
                 print(table)
                 print(f"VALORANT rank yoinker v{version}")
