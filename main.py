@@ -314,8 +314,8 @@ try:
                         # LEVEL
                         level = PLcolor
 
-                        # Rank Rating
-                        matches = match.get_recent_five_matches(player["Subject"])
+                        ## Rank Rating
+                        #matches = match.get_recent_five_matches(player["Subject"])
 
                         tableClass.add_row_table(table, [party_icon,
                                               agent,
@@ -326,8 +326,7 @@ try:
                                               rr,
                                               peakRank,
                                               leaderboard,
-                                              level,
-                                              " | ".join(matches)
+                                              level
                                               ])
                         bar()
             if game_state == "MENUS":
@@ -370,8 +369,8 @@ try:
                         # LEVEL
                         level = PLcolor
 
-                        # Rank Rating
-                        matches = match.get_recent_five_matches(player["Subject"])
+                        ### Rank Rating
+                        ##matches = match.get_recent_five_matches(player["Subject"])
 
                         tableClass.add_row_table(table, [party_icon,
                                               agent,
@@ -382,7 +381,7 @@ try:
                                               peakRank,
                                               leaderboard,
                                               level,
-                                              " | ".join(matches)
+                                              #" | ".join(matches)
                                               ])
                         # table.add_rows([])
                         bar()
@@ -394,7 +393,11 @@ try:
             else:
                 table.title = f"VALORANT status: {title}"
             server = ""
-            table.field_names = ["Party", "Agent", "Name", "Skin", "Rank", "RR", "Peak Rank", "pos.", "Level", "Rank Ratings"]
+            if game_state in ("MENUS", "PREGAME"): 
+                table.field_names = ["Party", "Agent", "Name", "Skin", "Rank", "RR", "Peak Rank", "pos.", "Level"]
+            else:
+                table.field_names = ["Party", "Agent", "Name", "Skin", "Rank", "RR", "Peak Rank", "pos.", "Level", "Rank Ratings"]
+
             if title is not None:
                 print(table)
                 print(f"VALORANT rank yoinker v{version}")
