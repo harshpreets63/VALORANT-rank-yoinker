@@ -4,6 +4,7 @@ import requests
 version = "2.0"
 enablePrivateLogging = False
 hide_names = False
+hide_level = False
 
 
 before_ascendant_seasons = [
