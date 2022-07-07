@@ -266,20 +266,26 @@ try:
                                               level,
                                               " | ".join(matches)
                                               ])
-                        stats.save_data(
-                            {
-                                player["Subject"]: {
-                                    "name": names[player["Subject"]],
-                                    "agent": agent_dict[player["CharacterID"].lower()],
-                                    "map": map_dict[coregame_stats["MapID"].lower()],
-                                    "rank": playerRank[0],
-                                    "rr": rr,
-                                    "match_id": coregame.match_id,
-                                    "epoch": time.time(),
-                                }
-                            }
-                        )
                         bar()
+                        try:
+                            stats.save_data(
+                                {
+                                    player["Subject"]: {
+                                        "name": names[player["Subject"]],
+                                        "agent": agent_dict[player["CharacterID"].lower()],
+                                        "map": map_dict[coregame_stats["MapID"].lower()],
+                                        "rank": playerRank[0],
+                                        "rr": rr,
+                                        "match_id": coregame.match_id,
+                                        "epoch": time.time(),
+                                    }
+                                }
+                            )
+                            bar()
+
+
+                        except Exception:
+                            pass
             elif game_state == "PREGAME":
                 already_played_with = []
                 pregame_stats = pregame.get_pregame_stats()
@@ -387,7 +393,8 @@ try:
                                               rr,
                                               peakRank,
                                               leaderboard,
-                                              level
+                                              level,
+                                              "",
                                               ])
                         bar()
             if game_state == "MENUS":
@@ -440,7 +447,7 @@ try:
                                               peakRank,
                                               leaderboard,
                                               level,
-                                              #" | ".join(matches)
+                                              "",
                                               ])
                         # table.add_rows([])
                         bar()
