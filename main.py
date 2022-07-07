@@ -27,6 +27,8 @@ from src.server import Server
 from src.errors import Error
 from src.match import Match
 
+from src.stats import Stats
+
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 os.system('cls')
@@ -70,15 +72,16 @@ try:
 
 
     agent_dict = content.get_all_agents()
+    map_dict = content.get_maps()
 
     colors = Colors(hide_names, agent_dict, AGENTCOLORLIST)
 
     match = Match(Requests, log)
 
     loadoutsClass = Loadouts(Requests, log, colors, Server)
-    tableClass = Table()
+    table = Table(cfg)
 
-
+    stats = Stats()
 
     log(f"VALORANT rank yoinker v{version}")
 
@@ -92,7 +95,7 @@ try:
 
     print(color("\nVisit https://vry.netlify.app/matchLoadouts to view full player inventories\n", fore=(255, 253, 205)))
     while True:
-        table = PrettyTable()
+        table.clear()
         try:
             presence = presences.get_presence()
             game_state = presences.get_game_state(presence)
@@ -128,7 +131,53 @@ try:
                     partyIcons = {}
                     lastTeamBoolean = False
                     lastTeam = "Red"
+
+
+                    already_played_with = []
+                    stats_data = stats.read_data()
+
+                    for p in Players:
+                        if p["Subject"] == Requests.puuid:
+                            allyTeam = p["TeamID"]
                     for player in Players:
+
+                        if player["Subject"] in stats_data.keys():
+                            if player["Subject"] != Requests.puuid and player["Subject"] not in partyMembersList:
+                                curr_player_stat = stats_data[player["Subject"]][-1]
+                                i = 1
+                                while curr_player_stat["match_id"] == coregame.match_id and len(stats_data[player["Subject"]]) > i:
+                                    i+=1
+                                # if curr_player_stat["match_id"] == coregame.match_id and len(stats_data[player["Subject"]]) > 1:
+                                    curr_player_stat = stats_data[player["Subject"]][-i]
+                                if curr_player_stat["match_id"] != coregame.match_id:
+                                    #checking for party memebers and self players
+                                    times = 0
+                                    m_set = ()
+                                    for m in stats_data[player["Subject"]]:
+                                        if m["match_id"] != coregame.match_id and m["match_id"] not in m_set:
+                                            times += 1
+                                            m_set += (m["match_id"],)
+                                    if player["PlayerIdentity"]["Incognito"] == False:
+                                        already_played_with.append(
+                                                {
+                                                    "times": times,
+                                                    "name": curr_player_stat["name"],
+                                                    "agent": curr_player_stat["agent"],
+                                                    "time_diff": time.time() - curr_player_stat["epoch"]
+                                                })
+                                    else:
+                                        if player["TeamID"] == allyTeam:
+                                            team_string = "your"
+                                        else:
+                                            team_string = "enemy"
+                                        already_played_with.append(
+                                                {
+                                                    "times": times,
+                                                    "name": agent_dict[player["CharacterID"].lower()] + " on " + team_string + " team",
+                                                    "agent": curr_player_stat["agent"],
+                                                    "time_diff": time.time() - curr_player_stat["epoch"]
+                                                })
+
                         party_icon = ''
 
                         # set party premade icon
@@ -152,16 +201,16 @@ try:
                         playerRank = playerRank[0]
                         player_level = player["PlayerIdentity"].get("AccountLevel")
                         if player["PlayerIdentity"]["Incognito"]:
-                            Namecolor = colors.get_color_from_team(coregame_stats["Players"][0]['TeamID'],
+                            Namecolor = colors.get_color_from_team(player["TeamID"],
                                                             names[player["Subject"]],
                                                             player["Subject"], Requests.puuid, agent=player["CharacterID"], party_members=partyMembersList)
                         else:
-                            Namecolor = colors.get_color_from_team(coregame_stats["Players"][0]['TeamID'],
+                            Namecolor = colors.get_color_from_team(player["TeamID"],
                                                             names[player["Subject"]],
                                                             player["Subject"], Requests.puuid, party_members=partyMembersList)
                         if lastTeam != player["TeamID"]:
                             if lastTeamBoolean:
-                                tableClass.add_row_table(table, ["", "", "", "", "", "", "", "", ""])
+                                table.add_empty_row()
                         lastTeam = player['TeamID']
                         lastTeamBoolean = True
                         if player["PlayerIdentity"]["HideAccountLevel"] and hide_level:
@@ -204,7 +253,8 @@ try:
                         # Rank Ratings
                         matches = match.get_recent_five_matches(player["Subject"])
 
-                        tableClass.add_row_table(table, [party_icon,
+
+                        table.add_row_table([party_icon,
                                               agent,
                                               name,
                                               # views,
@@ -216,8 +266,22 @@ try:
                                               level,
                                               " | ".join(matches)
                                               ])
+                        stats.save_data(
+                            {
+                                player["Subject"]: {
+                                    "name": names[player["Subject"]],
+                                    "agent": agent_dict[player["CharacterID"].lower()],
+                                    "map": map_dict[coregame_stats["MapID"].lower()],
+                                    "rank": playerRank[0],
+                                    "rr": rr,
+                                    "match_id": coregame.match_id,
+                                    "epoch": time.time(),
+                                }
+                            }
+                        )
                         bar()
             elif game_state == "PREGAME":
+                already_played_with = []
                 pregame_stats = pregame.get_pregame_stats()
                 try:
                     server = GAMEPODS[pregame_stats["GamePodID"]]
@@ -314,10 +378,7 @@ try:
                         # LEVEL
                         level = PLcolor
 
-                        ## Rank Rating
-                        #matches = match.get_recent_five_matches(player["Subject"])
-
-                        tableClass.add_row_table(table, [party_icon,
+                        table.add_row_table([party_icon,
                                               agent,
                                               name,
                                               # views,
@@ -330,6 +391,7 @@ try:
                                               ])
                         bar()
             if game_state == "MENUS":
+                already_played_with = []
                 Players = menu.get_party_members(Requests.puuid, presence)
                 names = namesClass.get_names_from_puuids(Players)
                 with alive_bar(total=len(Players), title='Fetching Players', bar='classic2') as bar:
@@ -369,10 +431,7 @@ try:
                         # LEVEL
                         level = PLcolor
 
-                        ### Rank Rating
-                        ##matches = match.get_recent_five_matches(player["Subject"])
-
-                        tableClass.add_row_table(table, [party_icon,
+                        table.add_row_table([party_icon,
                                               agent,
                                               name,
                                               "",
@@ -389,18 +448,23 @@ try:
                 # program_exit(1)
                 time.sleep(9)
             if server != "":
-                table.title = f"VALORANT status: {title} - {server}"
+                table.set_title(f"VALORANT status: {title} - {server}")
             else:
-                table.title = f"VALORANT status: {title}"
+                table.set_title(f"VALORANT status: {title}")
             server = ""
-            if game_state in ("MENUS", "PREGAME"): 
-                table.field_names = ["Party", "Agent", "Name", "Skin", "Rank", "RR", "Peak Rank", "pos.", "Level"]
-            else:
-                table.field_names = ["Party", "Agent", "Name", "Skin", "Rank", "RR", "Peak Rank", "pos.", "Level", "Rank Ratings"]
-
+            table.set_default_field_names()
             if title is not None:
-                print(table)
+                table.display()
                 print(f"VALORANT rank yoinker v{version}")
+                                        #                 {
+                                        #     "times": sum(stats_data[player["Subject"]]),
+                                        #     "name": curr_player_stat["name"],
+                                        #     "agent": curr_player_stat["agent"],
+                                        #     "time_diff": time.time() - curr_player_stat["time"]
+                                        # })
+                for played in already_played_with:
+                    print(f"\nAlready played with {played['name']} (last {played['agent']}) {stats.convert_time(played['time_diff'])} ago. (Total played {played['times']} times)")
+                already_played_with = []
         if cfg.cooldown == 0:
             input("Press enter to fetch again...")
         else:
