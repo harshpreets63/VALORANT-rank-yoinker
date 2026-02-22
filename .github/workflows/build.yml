@@ -2,7 +2,8 @@ name: Build
 
 env:
   PYTHON_VERSION: '3.10'
-
+on:
+  workflow_dispatch:
 on:
   push:
     branches:
